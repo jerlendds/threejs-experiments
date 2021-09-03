@@ -13,3 +13,8 @@ This repo renders isometric tiles to the screen through threejs with the text 'r
 ### Demo
 
 <img src="./docs/demo.gif" />
+
+
+#### Added more grid-like tiling
+
+<img src="./docs/grid-like-tiling.png" />
