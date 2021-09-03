@@ -8,12 +8,22 @@ document.body.style = "margin: 0;";
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 
+// https://threejsfundamentals.org/threejs/lessons/threejs-picking.html
+// https://developer.mozilla.org/en-US/docs/Games/Techniques/Tilemaps/Square_tilemaps_implementation:_Scrolling_maps
+
 
 let material = function() {
     let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
 
+    let setColor;
+    if (Math.floor(Math.random()*52) % 2) {
+        setColor = 0x121214;
+    } else {
+        setColor = randomColor
+    }
+
     return new THREE.MeshPhongMaterial({
-        color: randomColor,
+        color: setColor,
         specular: 0xffffff,
         shininess: 50,
     })
@@ -21,6 +31,7 @@ let material = function() {
 let planeGeometry = function(width, height) {
     return new THREE.PlaneGeometry( width, height )
 }
+
 let createOrthographic = function( width=WIDTH, height=HEIGHT, aspect, D ) {
     return new THREE.OrthographicCamera(-D*aspect, D*aspect, D, -D, 1, 1000)
 }
@@ -36,7 +47,8 @@ let create_light = function(x = 10, y= 20, z =15) {
     light.position.set(x, y, z)
     scene.add(light)
 }
-
+let calculateVisibleArea = function() {
+}
 
 let renderer = createRenderer(WIDTH, HEIGHT)
 let camera = createOrthographic(WIDTH, HEIGHT,
@@ -55,33 +67,56 @@ scene.background = new THREE.Color(0x363635)
 
 // Setting up scene camera and lighting
 create_light()
-camera.position.set(20, 20, 20)
+camera.position.set(40, 40, 40)
 camera.lookAt(scene.position)
 scene.add( new THREE.AmbientLight(0x4000ff) )
 
+
 // Creating tile array
-let createMap = function(SIZE = 10, plane_length = 0.5, camera) {
+let createMap = function(SIZE = 10, plane_length = 1) {
     let tileMap = [];
+    let rotation = -1.5708
+
     for (let x = 0; x < SIZE; x++) {
         for (let y = 0; y < SIZE; y++) {
+            let mat = material()
+
             let tile = new THREE.Mesh(
                 planeGeometry(plane_length, plane_length),
-                material()
-            );
-            tile.position.y = y / 2 + camera.left * 2;
-            tile.position.x = x / 2 + camera.left * 2;
-            tile.rotation.x = -1.5708
-            tileMap.push([tile])
+                mat
+            )
+            let tileOne = new THREE.Mesh(
+                planeGeometry(plane_length, plane_length),
+                mat
+            )
+
+            tile.position.y = (x + y);
+            tile.position.x = (x + x);
+            tileOne.position.y = (x + y+1);
+            tileOne.position.x = (x + x+1);
+
+
+            tile.rotation.x = rotation;
+            tileOne.rotation.x = rotation;
+
+            tileMap.push(tile)
+            tileMap.push(tileOne)
             scene.add(tile)
+            scene.add(tileOne)
+
         }
     }
-    let target = new THREE.Vector3();
-    tileMap[0][0].getWorldPosition( target )
-    console.log('first tile', tileMap[0][0])
-    console.log('first tile target world position', target)
     return tileMap
 }
-console.log(createMap(70, 0.5, camera ))
+
+
+let map = createMap()
+
+let unloadMap = function(tileMap) {
+    for (let i=0; i < tileMap.length; i++) {
+        scene.remove(tileMap[i])
+    }
+}
 
 
 // let fps_node = createFpsElement()
@@ -125,22 +160,34 @@ hudTexture.needsUpdate = true;
 let hudMaterial = new THREE.MeshBasicMaterial( {map: hudTexture, transparent: true } );
 
 // Create plane to render the HUD. This plane fill the whole screen.
-var plane = new THREE.Mesh(
+let plane = new THREE.Mesh(
     new THREE.PlaneGeometry( WIDTH, HEIGHT ),
     hudMaterial );
 let sceneHUD = new THREE.Scene({ alpha: true });
 
 sceneHUD.add( plane );
 
+let firstTile = new THREE.BoxHelper(map[0], 0xff0000);
+let secondTile = new THREE.BoxHelper(map[1], 0xff0000);
+let lastTile = new THREE.BoxHelper(map[map.length - 1], 0xff0000);
+
+firstTile.update();
+secondTile.update()
+lastTile.update()
+
+// visible bounding box
+scene.add(firstTile);
+scene.add(secondTile);
+scene.add(lastTile);
 
 function animate() {
     requestAnimationFrame( animate );
 
     stats.begin();
-
     orbit.update()
     // Comments represent the old/broken? fps measuring approach
     // let time1 = performance.now()
+
     hudTexture.needsUpdate = true;
     renderer.render(scene, camera);
     renderer.render(sceneHUD, hudCamera);
