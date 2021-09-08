@@ -5,14 +5,13 @@ import createFpsElement from "./fps";
 import Stats from 'stats.js'
 
 document.body.style = "margin: 0;";
-const WIDTH = window.innerWidth;
-const HEIGHT = window.innerHeight;
+
 
 // https://threejsfundamentals.org/threejs/lessons/threejs-picking.html
 // https://developer.mozilla.org/en-US/docs/Games/Techniques/Tilemaps/Square_tilemaps_implementation:_Scrolling_maps
 
 
-let material = function() {
+let randomMat = function() {
     let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
 
     let setColor;
@@ -28,10 +27,28 @@ let material = function() {
         shininess: 50,
     })
 }
-let planeGeometry = function(width, height) {
-    return new THREE.PlaneGeometry( width, height )
+
+let grassMat = function() {
+    let colors = [ 0x0D4523, 0x11572D, 0x0B4D25]
+    let idx = Math.floor(Math.random()*colors.length)
+    return new THREE.MeshPhongMaterial({
+        color: colors[idx],
+        specular: 0xffffff,
+        shininess: 50,
+    })
 }
 
+const WIDTH = window.innerWidth;
+const HEIGHT = window.innerHeight;
+let planeGeometry = function(width, height) {
+    return new THREE.PlaneGeometry( width, height, width * 5, height * 5 )
+}
+let planeBufGeometry = function(width, height) {
+    return new THREE.PlaneBufferGeometry( width, height )
+}
+let cubeBufGeometry = function(width, height, depth) {
+    return new THREE.BoxBufferGeometry( width, height, depth )
+}
 let createOrthographic = function( width=WIDTH, height=HEIGHT, aspect, D ) {
     return new THREE.OrthographicCamera(-D*aspect, D*aspect, D, -D, 1, 1000)
 }
@@ -42,8 +59,8 @@ let createRenderer = function(width, height) {
 
     return renderer;
 }
-let create_light = function(x = 10, y= 20, z =15) {
-    let light = new THREE.PointLight(0xffffff, 6, 40)
+let createLight = function(x = 10, y= 80, z =20) {
+    let light = new THREE.PointLight(0xffffff, 20, 90)
     light.position.set(x, y, z)
     scene.add(light)
 }
@@ -63,54 +80,103 @@ orbit.mouseButtons = { LEFT: THREE.MOUSE.PAN };
 
 // Creating scene with gray background
 let scene = new THREE.Scene()
-scene.background = new THREE.Color(0x363635)
+scene.background = new THREE.Color(0x87CEEB)
 
 // Setting up scene camera and lighting
-create_light()
-camera.position.set(40, 40, 40)
+camera.position.set(250, 250, 250)
 camera.lookAt(scene.position)
 scene.add( new THREE.AmbientLight(0x4000ff) )
 
+console.log(camera)
+function random_unit_vector(){
+    let theta = Math.random() * 2 * Math.PI;
+    return {
+        x: Math.cos(theta),
+        y: Math.sin(theta),
+        z: Math.tan(theta)
+    };
+
+}
+
+let addNoise = function(nodes=100) {
+    let grd = [];
+
+    for (let i = 0; i < nodes; i++) {
+        let row = [];
+        for (let j = 0; j < nodes; j++) {
+            row.push(random_unit_vector());
+        }
+        grd.push(row);
+    }
+
+    return grd
+}
+
 
 // Creating tile array
-let createMap = function(SIZE = 10, plane_length = 1) {
+let createMap = function(SIZE = 100, plane_length = 1) {
     let tileMap = [];
     let rotation = -1.5708
+    let tile, tileOne, geometry, mat, offset;
 
-    for (let x = 0; x < SIZE; x++) {
+    for (let x = 0; x < SIZE / 1.5; x++) {
+
         for (let y = 0; y < SIZE; y++) {
-            let mat = material()
+            let z_offset = grid[x][y].z
+            let x_offset = grid[x][y].x
+            let y_offset = grid[x][y].y
+            offset = x_offset
+            if (z_offset < 1) {
+                offset = x_offset * 1.2
+            }  else if (x_offset < 1) {
+                offset = x_offset * 0.5
+            } else  if (z_offset > 1) {
+                offset = z_offset * 0.5
+            }// else {
+                // offset = (y_offset * x_offset * z_offset) * 2
+            // }
+            if (offset < 0) {
+                offset = Math.abs(offset)
+            }
 
-            let tile = new THREE.Mesh(
-                planeGeometry(plane_length, plane_length),
+            mat = grassMat()
+            geometry = cubeBufGeometry(plane_length, plane_length, offset)
+
+
+            tile = new THREE.Mesh(
+                geometry,
                 mat
             )
-            let tileOne = new THREE.Mesh(
-                planeGeometry(plane_length, plane_length),
+            tileOne = new THREE.Mesh(
+                geometry,
                 mat
             )
 
-            tile.position.y = (x + y);
-            tile.position.x = (x + x);
-            tileOne.position.y = (x + y+1);
-            tileOne.position.x = (x + x+1);
-
-
+            tile.position.z = x - y ;
+            tile.position.x = x + x;
+            tileOne.position.z = x - y + 1;
+            tileOne.position.x = x + x + 1;
+            // tile.position.y = z_offset
+            // tileOne.position.y = z_offset
             tile.rotation.x = rotation;
             tileOne.rotation.x = rotation;
-
+            // tile.rotation.x = Math.PI * -0.5
+            // tileOne.rotation.x = Math.PI * -0.5
             tileMap.push(tile)
             tileMap.push(tileOne)
             scene.add(tile)
             scene.add(tileOne)
-
         }
     }
     return tileMap
 }
 
-
+let grid = addNoise()
 let map = createMap()
+createLight(map[1000].x, map[1000].y, map[1000].z)
+
+
+console.log("Tile Count: " + map.length)
 
 let unloadMap = function(tileMap) {
     for (let i=0; i < tileMap.length; i++) {

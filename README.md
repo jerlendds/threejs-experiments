@@ -18,3 +18,13 @@ This repo renders isometric tiles to the screen through threejs with the text 'r
 #### Added more grid-like tiling
 
 <img src="./docs/grid-like-tiling.png" />
+
+
+#### Added grass-like material
+
+<img src="./docs/grass_material.png" />
+
+#### Added noise
+
+<img src="./docs/noise.png" />
+
