@@ -25,9 +25,10 @@ In-progress pictures of this threejs demo are below :)
 
 #### Added perlin mountains
 
-<img src="./docs/perlinMountains.png" />
-<img src="./docs/perlinMountains1.png" />
-<img src="./docs/perlinMountains2.png" />
+<img alt="rts plex" src="./docs/perlinMountains.png" />
+<img alt="rts plex" src="./docs/perlinMountains1.png" />
+<img alt="rts plex" src="./docs/perlinMountains2.png" />
+<img alt="rts plex" src="./docs/perlinMountains3.png" />
 
 #### Added noise
 

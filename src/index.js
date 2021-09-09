@@ -180,7 +180,7 @@ let addPerlinNoise = function(size= 50, xv = 4.2, yv = 5.4, zv = 10) {
         let row = []
         for (var y = 0; y < HEIGHT; y++) {
             // noise.simplex2 and noise.perlin2 return values between -1 and 1.
-            let value = perlin.simplex2(x / 4 , y  / 8);
+            let value = perlin.simplex2(x / 8 , y  / 8);
             if ( value < 0 ) {
                 value = Math.abs(value) * 5
             }
