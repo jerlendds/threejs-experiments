@@ -1,9 +1,9 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as THREE from 'three';
-
 import createFpsElement from "./fps";
 import Stats from 'stats.js'
 
+import {Noise} from'noisejs'
 document.body.style = "margin: 0;";
 
 
@@ -59,8 +59,9 @@ let createRenderer = function(width, height) {
 
     return renderer;
 }
-let createLight = function(x = 10, y= 80, z =20) {
-    let light = new THREE.PointLight(0xffffff, 20, 90)
+let createLight = function(x = 10, y= 80, z =20,
+                           intensity=20, distance=85) {
+    let light = new THREE.PointLight(0xfefefe, intensity, distance)
     light.position.set(x, y, z)
     scene.add(light)
 }
@@ -89,7 +90,8 @@ scene.add( new THREE.AmbientLight(0x4000ff) )
 
 console.log(camera)
 function random_unit_vector(){
-    let theta = Math.random() * 2 * Math.PI;
+    let rand = Math.random() * 1.5
+    let theta = rand * Math.PI;
     return {
         x: Math.cos(theta),
         y: Math.sin(theta),
@@ -98,50 +100,47 @@ function random_unit_vector(){
 
 }
 
-let addNoise = function(nodes=100) {
-    let grd = [];
+let addNoise = function(nodes=25) {
+    let grid = [];
 
     for (let i = 0; i < nodes; i++) {
         let row = [];
         for (let j = 0; j < nodes; j++) {
             row.push(random_unit_vector());
         }
-        grd.push(row);
+        grid.push(row);
     }
 
-    return grd
+    return grid
 }
 
 
+
 // Creating tile array
-let createMap = function(SIZE = 100, plane_length = 1) {
+let createMap = function(SIZE = 50, plane_length = 1, noise,
+                         offsetWidth=1.6, offsetHeight=1.35,
+                         offsetMultiplier=2.18) {
     let tileMap = [];
     let rotation = -1.5708
     let tile, tileOne, geometry, mat, offset;
-
+    let grid = noise
+    console.log('grid', grid)
     for (let x = 0; x < SIZE / 1.5; x++) {
-
+        let offset_x = grid[x]
         for (let y = 0; y < SIZE; y++) {
-            let z_offset = grid[x][y].z
-            let x_offset = grid[x][y].x
-            let y_offset = grid[x][y].y
-            offset = x_offset
-            if (z_offset < 1) {
-                offset = x_offset * 1.2
-            }  else if (x_offset < 1) {
-                offset = x_offset * 0.5
-            } else  if (z_offset > 1) {
-                offset = z_offset * 0.5
-            }// else {
-                // offset = (y_offset * x_offset * z_offset) * 2
-            // }
-            if (offset < 0) {
-                offset = Math.abs(offset)
-            }
-
+            offset = offset_x[y]
+            console.log(offset)
             mat = grassMat()
             geometry = cubeBufGeometry(plane_length, plane_length, offset)
 
+            if (offset > 2) {
+                mat = new THREE.MeshPhongMaterial({
+                    color: 0x112121,
+                    specular: 0xffffff,
+                    shininess: 50,
+                })
+                geometry = cubeBufGeometry(plane_length * offsetWidth, plane_length * offsetHeight, offset * offsetMultiplier)
+            }
 
             tile = new THREE.Mesh(
                 geometry,
@@ -152,9 +151,9 @@ let createMap = function(SIZE = 100, plane_length = 1) {
                 mat
             )
 
-            tile.position.z = x - y ;
+            tile.position.z = x + y ;
             tile.position.x = x + x;
-            tileOne.position.z = x - y + 1;
+            tileOne.position.z = x + y + 1;
             tileOne.position.x = x + x + 1;
             // tile.position.y = z_offset
             // tileOne.position.y = z_offset
@@ -171,9 +170,31 @@ let createMap = function(SIZE = 100, plane_length = 1) {
     return tileMap
 }
 
-let grid = addNoise()
-let map = createMap()
-createLight(map[1000].x, map[1000].y, map[1000].z)
+
+let addPerlinNoise = function(size= 50, xv = 4.2, yv = 5.4, zv = 10) {
+    // value passed into the constructor is used as a seed
+    let perlin;
+    perlin = new Noise(Math.random());
+    let rows = []
+    for (let x = 0; x < WIDTH; x++) {
+        let row = []
+        for (var y = 0; y < HEIGHT; y++) {
+            // noise.simplex2 and noise.perlin2 return values between -1 and 1.
+            let value = perlin.simplex2(x / 4 , y  / 8);
+            if ( value < 0 ) {
+                value = Math.abs(value) * 5
+            }
+            row.push(value)
+        }
+        rows.push(row)
+    }
+    console.log('rows', rows)
+    return rows
+}
+
+let noise = addPerlinNoise()
+let map = createMap(25, 1, noise)
+createLight(map[150].x, map[150].y, map[150].z)
 
 
 console.log("Tile Count: " + map.length)
@@ -196,6 +217,12 @@ let useStats = function() {
 let stats = useStats()
 
 
+let connectTallPaths = function() {
+
+}
+
+
+
 let createOverlayCanvasElement = function(width=WIDTH, height=HEIGHT) {
     let hudCanvas = document.createElement('canvas');
     hudCanvas.style = "position: absolute; top: 0; left: 0; pointer-events: none; visibility:hidden; display: none;"
@@ -206,7 +233,7 @@ let createOverlayCanvasElement = function(width=WIDTH, height=HEIGHT) {
 }
 
 
-let createHudBitmap = function(canvas, text='rtsplx threejs',
+let createHudBitmap = function(canvas, text='rtsplex threejs',
                                x=WIDTH / 6,
                                y=HEIGHT - HEIGHT * 0.05) {
     let bitmap = canvas.getContext('2d');
